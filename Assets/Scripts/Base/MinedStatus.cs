@@ -1,7 +1,6 @@
 using System.Collections.Generic;
-using UnityEngine;
 
-public class MinedResources : MonoBehaviour
+public class MinedStatus
 {
     private List<Resource> _minedResources = new();
 

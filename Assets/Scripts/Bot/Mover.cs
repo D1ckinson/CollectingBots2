@@ -38,13 +38,6 @@ public class Mover : MonoBehaviour
         _agent.isStopped = false;
     }
 
-    public void Move(Transform target)
-    {
-        _target = target.position;
-        _agent.SetDestination(target.position);
-        _agent.isStopped = false;
-    }
-
     private void Stop()
     {
         _agent.isStopped = true;

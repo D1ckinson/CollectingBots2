@@ -15,10 +15,10 @@ public class Flag : MonoBehaviour
         _camera = Camera.main;
         _terrain = Terrain.activeTerrain;
 
-        StartCoroutine(Move());
+        StartCoroutine(FollowCursor());
     }
 
-    private IEnumerator Move()
+    private IEnumerator FollowCursor()
     {
         bool isRun = true;
         Ray ray;

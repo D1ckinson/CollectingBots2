@@ -5,20 +5,17 @@ public class Bootstrap : MonoBehaviour
     [SerializeField] private ResourceSpawner _spawner;
     [SerializeField] private Base _base;
     [SerializeField] private int _startBotsCount = 3;
-    [SerializeField] private MinedResources _minedStatus;
+    [SerializeField] private BotFactory _botFactory;
+    [SerializeField] private BaseFactory _baseFactory;
 
     private void Start()
     {
         _spawner.Init();
         _spawner.Run();
 
-        _base.Init(_minedStatus);
+        new BaseUtilities(_botFactory, _baseFactory).InitBase(_base);
 
         for (int i = 0; i < _startBotsCount; i++)
             _base.BuildBot();
-
-        _base.RunScanner();
-        _base.StartExtraction();
-        _base.BuildBots();
     }
 }

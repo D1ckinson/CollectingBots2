@@ -3,8 +3,7 @@ using UnityEngine;
 public class BotFactory : MonoBehaviour
 {
     [SerializeField] private Bot _botPrefab;
-    [SerializeField] private Transform _spawn;
 
-    public Bot Create() =>
-        Instantiate(_botPrefab, _spawn.position, Quaternion.identity);
+    public Bot Create(Vector3 position) =>
+        Instantiate(_botPrefab, position, Quaternion.identity);
 }

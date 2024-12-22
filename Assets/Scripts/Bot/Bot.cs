@@ -10,20 +10,26 @@ public class Bot : MonoBehaviour
     private ResourceCollector _collector;
     private Resource _resource;
     private Base _base;
-    private Flag _flag;
-    private Base _basePrefab;
 
-    public event Action<Base> BasePlaced;
     public event Action TargetReached;
-    public event Action ItemPicked;
 
     public bool IsBusy { get; private set; }
+
+    private void OnDisable()
+    {
+        if (_mover == null)
+            return;
+
+        _mover.TargetReached -= TargetReached;
+    }
 
     public void Init()
     {
         _collector = new(_collectPoint);
+
         _mover = GetComponent<Mover>();
         _mover.Init();
+        _mover.TargetReached += TellTargetReached;
     }
 
     public void ExtractResource(Resource resource, Base @base)
@@ -37,34 +43,11 @@ public class Bot : MonoBehaviour
         _mover.Move(_resource.transform.position);
     }
 
-    public void BuildBase(Flag flag, Base basePrefab)
-    {
-        _flag = flag;
-        _basePrefab = basePrefab;
+    public void Move(Vector3 point) =>
+        _mover.Move(point);
 
-        _mover.Move(_flag.transform.position);
-        _mover.TargetReached += PlaceBase;
-    }
-
-    public void PlaceBase()
-    {
-        Base @base = Instantiate(_basePrefab, _flag.transform.position, Quaternion.identity);
-
-        Destroy(_flag.gameObject);
-        _mover.TargetReached -= PlaceBase;
-
-        BasePlaced?.Invoke(@base);
-        @base.TakeBot(this);
-    }
-
-    public void DropResource() =>
-        _collector.Relieve();
-
-    private void TellTargetReached()
-    {
-        _mover.TargetReached -= TellTargetReached;
+    private void TellTargetReached() =>
         TargetReached?.Invoke();
-    }
 
     private void PickUp()
     {

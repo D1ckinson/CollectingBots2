@@ -6,26 +6,22 @@ using TMPro;
 using UnityEngine;
 
 [RequireComponent(typeof(ResourceScanner))]
-[RequireComponent(typeof(BotFactory))]
 [RequireComponent(typeof(BaseMarker))]
 public class Base : MonoBehaviour
 {
     [SerializeField] private TMP_Text _text;
+    [SerializeField] private Transform _botSpawn;
 
     private ResourceScanner _scanner;
     private ScoreViewer _scoreViewer;
-    private BotFactory _botFactory;
     private BaseMarker _baseMarker;
     private HashSet<Resource> _resources = new();
-    private MinedResources _minedStatus;
     private int _score = 0;
-    private int _botCost = 3;
-    private int _baseCost = 5;
     private Coroutine _spendScore;
     private Coroutine _extract;
-    private float _extractDelay = 0.1f;
     private List<Bot> _bots = new();
     private bool _isAlreadyBuilt = false;
+    private BaseUtilities _utilities;
 
     public event Action<int> ScoreChange;
 
@@ -44,25 +40,22 @@ public class Base : MonoBehaviour
         _baseMarker.FlagPlaced += BuildBase;
     }
 
-    public void Init(MinedResources minedStatus)
+    public void Init(BaseUtilities utilities)
     {
+        _utilities = utilities;
         _scanner = GetComponent<ResourceScanner>();
-        _botFactory = GetComponent<BotFactory>();
         _baseMarker = GetComponent<BaseMarker>();
 
-        _minedStatus = minedStatus;
         _scoreViewer = new(_text, this, _score);
         _scoreViewer.Run();
     }
 
-    public void StartExtraction()
-    {
+    public void StartExtraction() =>
         _extract = StartCoroutine(ExtractResources());
-    }
 
     public void BuildBot()
     {
-        Bot bot = _botFactory.Create();
+        Bot bot = _utilities.CreateBot(_botSpawn.position);
 
         bot.Init();
         _bots.Add(bot);
@@ -98,7 +91,7 @@ public class Base : MonoBehaviour
     public void TakeResource(Resource resource)
     {
         _resources.Remove(resource);
-        _minedStatus.Remove(resource);
+        _utilities.RemoveMinedResource(resource);
         resource.Disable();
 
         _score++;
@@ -115,11 +108,13 @@ public class Base : MonoBehaviour
 
     private IEnumerator ExtractResources()
     {
-        WaitForSeconds wait = new(_extractDelay);
+        WaitForSeconds wait = new(_utilities.ExtractDelay);
 
         while (true)
         {
             yield return wait;
+
+            _resources.RemoveWhere(resource => resource.isActiveAndEnabled == false);
 
             for (int i = 0; i < _resources.Count(); i++)
             {
@@ -128,13 +123,10 @@ public class Base : MonoBehaviour
 
                 Resource resource = _resources.ElementAt(i);
 
-                if (resource.isActiveAndEnabled == false)
+                if (_utilities.IsResourceMined(resource))
                     continue;
 
-                if (_minedStatus.IsResourceMined(resource))
-                    continue;
-
-                _minedStatus.Add(resource);
+                _utilities.AddMinedResource(resource);
                 bot.ExtractResource(resource, this);
             }
         }
@@ -153,36 +145,36 @@ public class Base : MonoBehaviour
 
     private IEnumerator BuildBaseCoroutine(Flag flag)
     {
-        while (_score < _baseCost)
-        {
-            yield return null;
-        }
+        yield return new WaitUntil(() => _score >= _utilities.BaseCost);
 
         StopExtraction();
         Bot bot;
 
         while (TryGetFreeBot(out bot) == false)
-        {
             yield return null;
-        }
 
         _isAlreadyBuilt = true;
-        _score -= _baseCost;
-        bot.DropResource();
-        bot.BuildBase(flag, this);
-        bot.BasePlaced += InitBase;
+        _score -= _utilities.BaseCost;
+
+        bool isTargetReached = false;
+        void SetTrue() => isTargetReached = true;
+
+        bot.Move(flag.transform.position);
+        bot.TargetReached += SetTrue;
+
+        yield return new WaitUntil(() => isTargetReached);
+
+        bot.TargetReached -= SetTrue;
+
+        Base @base = _utilities.CreateBase(flag.transform.position);
+        _utilities.InitBase(@base);
+        @base.TakeBot(bot);
+
         _bots.Remove(bot);
 
+        Destroy(flag.gameObject);
         BuildBots();
         StartExtraction();
-    }
-
-    private void InitBase(Base @base)
-    {
-        @base.Init(_minedStatus);
-        @base.RunScanner();
-        @base.StartExtraction();
-        @base.BuildBots();
     }
 
     private IEnumerator BuildBotsCoroutine()
@@ -191,10 +183,10 @@ public class Base : MonoBehaviour
         {
             yield return null;
 
-            if (_score < _botCost)
+            if (_score < _utilities.BotCost)
                 continue;
 
-            _score -= _botCost;
+            _score -= _utilities.BotCost;
             ScoreChange?.Invoke(_score);
 
             BuildBot();

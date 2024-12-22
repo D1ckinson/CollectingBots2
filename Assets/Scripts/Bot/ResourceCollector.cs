@@ -24,9 +24,6 @@ public class ResourceCollector
 
     public Resource Relieve()
     {
-        if (_resource == null)
-            return null;
-
         Resource resource = _resource;
 
         _resource.transform.SetParent(null);
