@@ -7,7 +7,7 @@ using UnityEngine;
 
 [RequireComponent(typeof(ResourceScanner))]
 [RequireComponent(typeof(BaseMarker))]
-public class Base : MonoBehaviour
+public class Base : MonoBehaviour, IHaveScore//ResourceStorage// MonoBehaviour
 {
     [SerializeField] private TMP_Text _text;
     [SerializeField] private Transform _botSpawn;
@@ -16,14 +16,17 @@ public class Base : MonoBehaviour
     private ScoreViewer _scoreViewer;
     private BaseMarker _baseMarker;
     private HashSet<Resource> _resources = new();
-    private int _score = 0;
+    //private int _score = 0;
+    private ScoreStorage _scoreStorage = new();
     private Coroutine _spendScore;
     private Coroutine _extract;
     private List<Bot> _bots = new();
     private bool _isAlreadyBuilt = false;
     private BaseUtilities _utilities;
 
-    public event Action<int> ScoreChange;
+    public event Action<int> ScoreChanged;
+
+    //public event Action<int> ScoreChange;
 
     private void OnMouseUp()
     {
@@ -46,9 +49,13 @@ public class Base : MonoBehaviour
         _scanner = GetComponent<ResourceScanner>();
         _baseMarker = GetComponent<BaseMarker>();
 
-        _scoreViewer = new(_text, this, _score);
+        _scoreStorage.ScoreChanged += TellScoreChanged;
+        _scoreViewer = new(_text, this);//_scoreViewer = new(_text, this, _score);
         _scoreViewer.Run();
     }
+
+    public void TellScoreChanged(int score) =>
+        ScoreChanged?.Invoke(score);
 
     public void StartExtraction() =>
         _extract = StartCoroutine(ExtractResources());
@@ -92,10 +99,11 @@ public class Base : MonoBehaviour
     {
         _resources.Remove(resource);
         _utilities.RemoveMinedResource(resource);
-        resource.Disable();
+        //resource.Disable();
 
-        _score++;
-        ScoreChange?.Invoke(_score);
+        _scoreStorage.Add(resource);
+        //_score++;
+        //ScoreChange?.Invoke(_score);
     }
 
     private void StopExtraction()
@@ -145,7 +153,8 @@ public class Base : MonoBehaviour
 
     private IEnumerator BuildBaseCoroutine(Flag flag)
     {
-        yield return new WaitUntil(() => _score >= _utilities.BaseCost);
+        //yield return new WaitUntil(() => _score >= _utilities.BaseCost);
+        yield return new WaitUntil(() => _scoreStorage.TrySpend(_utilities.BaseCost));
 
         StopExtraction();
         Bot bot;
@@ -154,7 +163,7 @@ public class Base : MonoBehaviour
             yield return null;
 
         _isAlreadyBuilt = true;
-        _score -= _utilities.BaseCost;
+        //_score -= _utilities.BaseCost;
 
         bool isTargetReached = false;
         void SetTrue() => isTargetReached = true;
@@ -183,11 +192,14 @@ public class Base : MonoBehaviour
         {
             yield return null;
 
-            if (_score < _utilities.BotCost)
+            //if (_score < _utilities.BotCost)
+            //    continue;
+
+            if (_scoreStorage.TrySpend(_utilities.BotCost) == false)
                 continue;
 
-            _score -= _utilities.BotCost;
-            ScoreChange?.Invoke(_score);
+            //_score -= _utilities.BotCost;
+            //ScoreChange?.Invoke(_score);
 
             BuildBot();
         }

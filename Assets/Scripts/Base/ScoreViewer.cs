@@ -3,21 +3,21 @@ using TMPro;
 public class ScoreViewer
 {
     private TMP_Text _text;
-    private Base _base;
+    private IHaveScore _scoreHolder;
 
-    public ScoreViewer(TMP_Text text, Base @base,int score=0)
+    public ScoreViewer(TMP_Text text, IHaveScore scoreHolder, int score = 0)
     {
         _text = text;
-        _base = @base;
+        _scoreHolder = scoreHolder;
 
         UpdateScore(score);
     }
 
     public void Run() =>
-        _base.ScoreChange += UpdateScore;
+        _scoreHolder.ScoreChanged += UpdateScore;
 
     public void Stop() =>
-        _base.ScoreChange -= UpdateScore;
+        _scoreHolder.ScoreChanged -= UpdateScore;
 
     private void UpdateScore(int score) =>
         _text.text = score.ToString();

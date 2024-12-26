@@ -1,0 +1,1 @@
+public interface IUnitUser : IBaseModule { }
