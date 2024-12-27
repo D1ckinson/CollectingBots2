@@ -1,1 +1,4 @@
-public interface IExtractUnit { }
+public interface IExtractUnit
+{
+    public void Extract(Resource resource, IResourceStorage storage);
+}

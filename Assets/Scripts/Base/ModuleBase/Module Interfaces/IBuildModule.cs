@@ -1,1 +1,4 @@
-public interface IBuildModule { }
+public interface IBuild
+{
+
+}
